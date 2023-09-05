@@ -1,0 +1,110 @@
+# https://rclone.org/filtering/
+
+##############################################################
+# System Files
+##############################################################
+
+# Include System Files
++ /boot/efi/EFI/refind/**
++ /boot/efi/loader/**
++ /etc/fstab
++ /etc/hostname
++ /etc/modprobe.d/blacklist.conf
++ /etc/samba/smb.conf
++ /etc/sysctl.conf
+
+# Exclude System Files
+# Caveat emptor files (you may have placed important files here)
+- /opt/**
+- /root/**
+- /srv/**
+# System/Device paths
+- /.snapshots/**
+- /bin.*
+- /bin*
+- /bin/**
+- /boot/**
+- /dev/**
+- /etc/**
+- /lib*
+- /media/**
+- /mnt/**
+- /proc/**
+- /run/**
+- /sbin.*
+- /sbin*
+- /sbin/**
+- /srv/**
+- /sys/**
+- /tmp/**
+- /usr/**
+- /var/**
+
+##############################################################
+# Home Files
+##############################################################
+
+# Config Files
++ /home/**/.config/mimeapps.list
++ /home/**/.config/monitors.xml 
++ /home/**/.config/user-dirs*
+# Config Directories (whole-sale include)
++ /home/**/.config/autostart/**
++ /home/**/.config/btop/**
++ /home/**/.config/ckb-next/**
++ /home/**/.config/dconf/**
++ /home/**/.config/input-remapper/**
++ /home/**/.config/menus/**
++ /home/**/.config/parcellite/**
++ /home/**/.config/pipewire/**
++ /home/**/.config/pop-shell/**
++ /home/**/.config/pop-system-updater/**
++ /home/**/.config/REAPER/**
++ /home/**/.config/sxhkd/**
++ /home/**/.config/yabridgectl/**
++ /home/**/.config/zshrc.d/**
+# Exclude the rest of dir(s)
+- /home/**/.config/**
+
+# Local Share Files
++ /home/**/.local/share/applications/reaper*
++ /home/**/.local/share/applications/streamdeck*
++ /home/**/.local/share/icons/streamdeck*
+# Local Directories (whole-sale include)
++ /home/**/.local/share/desktop-directories/**
++ /home/**/.local/share/draw-on-your-screen/**
++ /home/**/.local/share/fonts/**
++ /home/**/.local/share/gnome-settings-daemon/**
++ /home/**/.local/share/gnome-shell/**
+# Exclude the rest of dir(s)
+- /home/**/.local/share/**
+- /home/**/.local/lib/**
+- /home/**/.local/state/**
+
+# Installs/Games/Etc we don't want to back up
+- /home/**/.steam*/**
+- /home/**/.steam*
+- /home/**/.var/**
+- /home/**/.oh-my-zsh/**
+
+# Junk files we don't want to back up
+- packages.*.txt
+- /home/**/.cache/**
+- /home/**/.com.google.Chrome*
+- /home/**/.dotnet/**
+- /home/**/.lesshst
+- /home/**/.pki/
+- /home/**/.viminfo
+- /home/**/.vscode/**
+- /home/**/.Xauthority
+- /home/**/.zcomp*
+- /home/**/*history*
+- /home/**/node_modules/**
+
+##############################################################
+# Skip to limit output, only for testing!
+##############################################################
+#- /home/**/.local/bin/
+#- /home/**/.wine/
+#- /home/**/Pictures/
+#- /home/**/.icons/
