@@ -95,13 +95,17 @@ function doBackup() {
     fi
   fi
 
-  docker run --rm -v "$SRC":/src -v "$DEST":/dest -v "$FILTER_LIST":/tmp/FILTER_LIST rclone/rclone copy /src /dest $DRY_RUN -lvP --transfers=15 --filter-from=/tmp/FILTER_LIST 2>&1 | tee "$DEST/log_copy.log"
+  echo -e "--------------------------------------------------------------------------------------------------------------------------\n\n" >> "$DEST/log_copy.log"
+  docker run --rm -v "$SRC":/src -v "$DEST":/dest -v "$FILTER_LIST":/tmp/FILTER_LIST rclone/rclone copy /src /dest $DRY_RUN -lv --transfers=15 --filter-from=/tmp/FILTER_LIST 2>&1 | tee -a "$DEST/log_copy.log"
+  echo -e "\n\n" >> "$DEST/log_copy.log"
 
   if [ -n "$DRY_RUN" ]; then
     echo -e "\n${YELLOW}DRY RUN - Skipping fixing Permissions to match original source!${RESET}\n\n"
   else
     echo -e "${GREEN}Fixing Permissions to match original source!${RESET}\n\n"
-    docker run --rm -v "$SRC":/src -v "$DEST":/dest -v "$DIR_RUN/recursivePermFix.sh":/tmp/recursivePermFix.sh ubuntu bash /tmp/recursivePermFix.sh 2>&1 | tee "$DEST/log_permFix.log"
+    echo -e "--------------------------------------------------------------------------------------------------------------------------\n\n" >> "$DEST/log_permFix.log"
+    docker run --rm -v "$SRC":/src -v "$DEST":/dest -v "$DIR_RUN/recursivePermFix.sh":/tmp/recursivePermFix.sh ubuntu bash /tmp/recursivePermFix.sh 2>&1 | tee -a "$DEST/log_permFix.log"
+    echo -e "\n\n" >> "$DEST/log_permFix.log"
   fi
 }
 
