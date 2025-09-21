@@ -1,23 +1,25 @@
-# Simple Local Backup
+# dotty
 
-This is a super simple, straightforward local backup script utilizing [`rclone sync`](https://rclone.org/commands/rclone_sync/) via the official [Docker](https://hub.docker.com/r/rclone/rclone) image.
+This is a super simple, straightforward local backup script utilizing `rsync`.
 
-Supplied is a default `FILTER_LIST` to get started, but be sure to modify as you see fit.
+Supplied is a default `FILTER_LIST.common` and `FILTER_LIST.custom` to get started, but be sure to modify as you see fit.
 
-> Refer to the [official documentation](https://rclone.org/filtering/) for more information about formatting this file.
+> Refer to the [manpage](https://man.archlinux.org/man/rsync.1.en#FILTER_RULES_IN_DEPTH) for more information about formatting this file.
 
-Usage:
+## Usage:
+
+> See output of each tool for help
+
+For dotfile and system configuration backup/restore:
 
 ```sh
-./backup.sh [-d|--dry-run] <dest> [<src>]
+./dotty 
 ```
 
-> `dest` will attempt to be created, and gracefully fail if not possible.
+For Package Manager list dumping and installing:
 
-It's suggested to supply `--dry-run` while tweaking the `FILTER_LIST` so as to not over/under copy files.
+```sh
+./packageListTool
+```
 
-I've also found it useful to temporarily *exclude* files in the `FILTER_LIST` (example within) to limit output while testing as well as it can dump a lot of information.
-
-### Troubleshooting
-
-Filters not working quite like you expect? Perform a Dry Run and it'll also [dump out the filters](https://rclone.org/filtering/#dump-filters-dump-the-filters-to-the-output) to preview what's going on!
+It's suggested to supply `--dry-run` while tweaking the `FILTER_LIST.*` files so as to not over/under copy files.

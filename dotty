@@ -1,0 +1,188 @@
+#!/bin/sh
+
+# dotty
+# Your system and dotfile backup butler.
+
+# Exit Values:
+# 1 - Invalid argument supplied
+# 2 - No destination supplied
+# 3 - Could not create destination (permission issue)
+# 4 - User cancelled backup
+# 100 - Not running as root
+
+# shellcheck disable=SC3037
+
+DEST=""
+SRC="/"
+FILTER_LIST_COMMON="$(dirname "$0")/FILTER_LIST.common"
+FILTER_LIST_CUSTOM="$(dirname "$0")/FILTER_LIST.custom"
+RSYNC_FLAGS="-av"
+LOG_BACKUP="log_backup.log"
+LOG_TIMESTAMP_FORMAT="%Y-%m-%d %H:%M:%S"
+SKIP_CONFIRMATIONS=""
+
+RED="\033[31m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+RESET="\033[0m"
+
+verify_root() {
+    who=$(whoami)
+    myid=$(id -u)
+
+    if [ "root" != "$who" ] || [ "0" != "$myid" ]; then
+        echo -e "${RED}Run this script as root!${RESET}"
+        echo -e "${YELLOW}Without root access, some files may not be accessible, and permissions no longer left intact.${RESET}"
+        exit 100
+    fi
+}
+
+show_help() {
+    echo "dotty"
+    echo "Usage: $0 [options] -d|--destination <dest>"
+    echo "Required:"
+    echo "  -d, --destination       Destination directory"
+    echo "Options:"
+    echo "  -s, --source            Source directory (default: /)"
+    echo "  -n, --dry-run           Simulate backup without changes"
+    echo "  --filter-file-common    rsync filter file for exclusion/inclusion rules (default: ./FILTER_LIST.common). Runs BEFORE custom file."
+    echo "  --filter-file-custom    rsync filter file for exclusion/inclusion rules (default: ./FILTER_LIST.custom). Runs AFTER common file."
+    echo "  -y, --yes               Skip confirmations."
+    echo "  -h, --help              Show this help message."
+    echo "Example:"
+    echo "  $0 /mnt/backupDest"
+    echo "  $0 --dry-run /mnt/backupDest /home/userSrc"
+}
+
+parse_args() {
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -y|--yes)
+                SKIP_CONFIRMATIONS=1
+                shift
+                ;;
+            -n|--dry-run)
+                RSYNC_FLAGS="$RSYNC_FLAGS -n"
+                shift
+                ;;
+            --filter-file-common)
+                FILTER_LIST_COMMON="$2"
+                shift 2 # shift for flag and value
+                ;;
+            --filter-file-custom)
+                FILTER_LIST_CUSTOM="$2"
+                shift 2 # shift for flag and value
+                ;;
+            -d|--destination)
+                DEST="$2"
+                shift 2
+                ;;
+            -s|--source)
+                SRC="$2"
+                shift 2
+                ;;
+            *)
+                echo -e "${RED}Unexpected argument: $1${RESET}"
+                echo
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+
+    if [ -z "$DEST" ]; then
+        echo -e "${RED}Destination not supplied!${RESET}"
+        echo
+        show_help
+        exit 2
+    fi
+}
+
+prompt_confirm() {
+    printf "> Are you sure you want to perform this backup? [Y/n] "
+    read -r answer
+    answer="${answer%"${answer#?}"}"  # Take first character
+
+    case "$answer" in
+        ""|Y|y)
+            echo -e "${GREEN}Continuing Backup!${RESET}"
+            ;;
+        N|n|*)
+            echo -e "${YELLOW}Cancelling Backup!${RESET}"
+            exit 4
+            ;;
+    esac
+}
+
+perform_backup() {
+    case "$RSYNC_FLAGS" in
+        *-n*)
+            dry_run_status="Yes"
+            ;;
+        *)
+            dry_run_status="No"
+            ;;
+    esac
+
+    echo "Performing Backup!"
+    echo "Source: $SRC"
+    echo "Destination: $DEST"
+    echo "Filter List (Common): $FILTER_LIST_COMMON"
+    echo "Filter List (Custom): $FILTER_LIST_CUSTOM"
+    echo "Dry Run: $dry_run_status"
+
+    if [ -z $SKIP_CONFIRMATIONS ]; then
+        prompt_confirm
+    fi
+
+    mkdir -p "$DEST" || {
+        echo -e "${RED}Could not create: $DEST (check permissions).${RESET}"
+        exit 3
+    }
+
+    : > "$DEST/$LOG_BACKUP"  # Initialize log file
+
+    echo -e "${GREEN}Starting rsync backup...${RESET}"
+    log_message "Starting rsync from $SRC to $DEST with filters from $FILTER_LIST_CUSTOM"
+
+    tmp_status=mktemp
+    (
+        # shellcheck disable=SC2086
+        rsync\
+            $RSYNC_FLAGS \
+            --filter="merge $FILTER_LIST_COMMON" \
+            --filter="merge $FILTER_LIST_CUSTOM" \
+            --filter="+ /*" \
+            --info=progress2 \
+            "$SRC" "$DEST" 2>&1
+        echo $? > $tmp_status
+
+        #  --prune-empty-dirs 
+    ) | tee -a "$DEST/$LOG_BACKUP"
+
+    rsync_exit_code=$(cat $tmp_status);
+    rm $tmp_status
+
+    # shellcheck disable=SC2181
+    if [ "$rsync_exit_code" -ne 0 ]; then
+        log_message "rsync failed with exit code $rsync_exit_code"
+        echo -e "${RED}Backup failed - check $DEST/$LOG_BACKUP for details.${RESET}"
+    else
+        log_message "rsync completed successfully."
+        echo -e "${GREEN}Backup completed - logs in $DEST/$LOG_BACKUP${RESET}"
+    fi
+}
+
+log_message() {
+    timestamp=$(date +"$LOG_TIMESTAMP_FORMAT")
+    printf "[%s] %s\n" "$timestamp" "$1" >> "$DEST/$LOG_BACKUP"
+}
+
+# Main execution
+verify_root
+parse_args "$@"
+perform_backup

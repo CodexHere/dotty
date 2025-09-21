@@ -1,0 +1,202 @@
+#!/bin/sh
+
+# shellcheck disable=SC2046
+# shellcheck disable=SC3037
+
+SCRIPT_NAME=$0
+SCRIPT_ARGS_STR="$*"
+
+usage() {
+    echo "Simple Package Backup for most distros"
+    echo "Usage: $SCRIPT_NAME [-f filename] [-p packageManager] <save|restore>"
+    echo "  -f: Optional filename (default: packages.list)"
+    echo "  -p: Optional package manager (options: apt, dnf, yum, pacman, yay, paru, zypper, apk)"
+    echo "  Command must be 'save' or 'restore'"
+    exit 1
+}
+
+filename="packages.list"
+package_manager=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -f)
+            shift
+            [ $# -eq 0 ] && usage
+            filename="$1"
+            ;;
+        -p)
+            shift
+            [ $# -eq 0 ] && usage
+            package_manager="$1"
+            ;;
+        -*)
+            echo "Invalid option: $1" >&2
+            usage
+            ;;
+        *)
+            if [ -z "$command" ]; then
+                command="$1"
+            else
+                usage
+            fi
+            ;;
+    esac
+    shift
+done
+
+# Check for exactly one command argument
+if [ -z "$command" ]; then
+    usage
+fi
+
+case "$command" in
+    save|restore)
+        # Validate command
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+detect_pm() {
+    if command -v yay >/dev/null 2>&1; then
+        echo "yay"
+    elif command -v paru >/dev/null 2>&1; then
+        echo "paru"
+    elif command -v pacman >/dev/null 2>&1; then
+        echo "pacman"
+    elif command -v apt >/dev/null 2>&1; then
+        echo "apt"
+    elif command -v dnf >/dev/null 2>&1; then
+        echo "dnf"
+    elif command -v yum >/dev/null 2>&1; then
+        echo "yum"
+    elif command -v zypper >/dev/null 2>&1; then
+        echo "zypper"
+    elif command -v apk >/dev/null 2>&1; then
+        echo "apk"
+    elif command -v flatpak >/dev/null 2>&1; then
+        echo "flatpak"
+    else
+        echo "Unsupported package manager detected."
+        exit 1
+    fi
+}
+
+handle_package_manager() {
+    # Handle save or restore based on package manager
+    case $1 in
+        apt) # Debian / Ubuntu
+            if [ "$command" = "save" ]; then
+                apt-mark showmanual | sort > "$filename"
+            else
+                sudo apt update
+                sudo apt install -y $(cat "$filename")
+            fi
+            ;;
+        dnf) # Red Hat
+            if [ "$command" = "save" ]; then
+                dnf history userinstalled | tail -n +3 | grep -v '^@' | sort > "$filename"
+            else
+                sudo dnf install -y $(cat "$filename")
+            fi
+            ;;
+        yum) # Red Hat (Legacy)
+            if [ "$command" = "save" ]; then
+                yum list installed | tail -n +2 | awk '{print $1}' > "$filename"
+            else
+                sudo yum install -y $(cat "$filename")
+            fi
+            ;;
+        yay) # AUR
+            if [ "$command" = "save" ]; then
+                yay -Qem | awk '{print $1}' | sort > "$filename"
+            else
+                yay -S --needed --noconfirm $(cat "$filename")
+            fi
+
+            printf "%bThis action is only for %s...%b\n" "${YELLOW}" "$1" "${RESET}"
+            printf "Run again specifying 'pacman' as the package manager:%b\n" "${RESET}"
+            printf "\t%s %s -p pacman\n" "$SCRIPT_NAME" "$SCRIPT_ARGS_STR"
+            ;;
+        paru) # AUR
+            if [ "$command" = "save" ]; then
+                paru -Qem | awk '{print $1}' | sort > "$filename"
+            else
+                paru -S --needed --noconfirm $(cat "$filename")
+            fi
+
+            printf "%bThis action is only for %s...%b\n" "${YELLOW}" "$1" "${RESET}"
+            printf "Run again specifying 'pacman' as the package manager:%b\n" "${RESET}"
+            printf "\t%s %s -p pacman\n" "$SCRIPT_NAME" "$SCRIPT_ARGS_STR"
+            ;;
+        pacman) # Arch
+            if [ "$command" = "save" ]; then
+                pacman -Qe | awk '{print $1}' | sort > "$filename"
+            else
+                sudo pacman -S --needed --noconfirm $(cat "$filename")
+            fi
+            ;;
+        zypper) # openSUSE
+            if [ "$command" = "save" ]; then
+                zypper se -si -t package | grep '^i+ ' | awk -F '|' '{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}' | sort > "$filename"
+            else
+                sudo zypper install --no-confirm $(cat "$filename")
+            fi
+            ;;
+        apk) # Alpine
+            if [ "$command" = "save" ]; then
+		cat /etc/apk/world > "$filename"
+            else
+		doas apk add $(cat "$filename")
+            fi
+            ;;
+        flatpak) # Flatpak
+            if [ "$command" = "save" ]; then
+                flatpak list --app --columns=application | tail -n +2 | sort > "$filename"
+            else
+                sudo flatpak install --noninteractive $(cat "$filename")
+            fi
+            ;;
+        *)
+            echo "Error: Invalid package manager '$PM'."
+            exit 1
+            ;;
+    esac
+
+    if [ $? = 0 ]; then
+        if [ "$command" = "save" ]; then
+            echo "Installed packages saved to $filename"
+        else
+            echo "Packages restored from $filename"
+        fi
+    else
+        echo "Failed to perform command!"
+        exit 99
+    fi
+}
+
+validate_package_manager() {
+    # If Package Manager is explicitly specified, validate it!
+    if [ -n "$package_manager" ]; then
+        if ! command -v "$package_manager" >/dev/null 2>&1; then
+            printf "%sError: Specified Package Manager '%s' is not installed.%s\n" "${RED}" "$package_manager" "${RESET}"
+            exit 1
+        fi
+        PM="$package_manager"
+        echo "Using supplied Package Manager: ${PM}"
+    # Not given, detect it...
+    else
+        PM=$(detect_pm)
+        echo "Detected Package Manager: ${PM}"
+    fi
+
+    if [ "$command" = "restore" ] && [ ! -f "$filename" ]; then
+        echo "Error: File '$filename' not found."
+        exit 1
+    fi
+}
+
+validate_package_manager
+handle_package_manager "$PM"

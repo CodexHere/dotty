@@ -1,0 +1,100 @@
+# ORDER OF THIS FILE MATTERS!
+
+##############################################################
+# System Files
+##############################################################
+
+# Exclude System Files
+## ⚠ Likely don't want to touch these ⚠
+# Caveat emptor files (you may have placed important files here)
+- /opt
+- /root
+- /srv
+# System/Device paths
+- /.snapshots
+- /bin.*
+- /bin*
+- /bin
+- /boot
+- /dev
+- /lib*
+- /lib
+- /lost+found
+- /media
+- /mnt
+- /proc
+- /recovery
+- /run
+- /sbin.*
+- /sbin*
+- /sbin
+- /srv
+- /sys
+- /tmp
+- /usr
+- /var
+
+# Include System Files
+## ⚠ Add System Files as neccessary ⚠
++ /boot/efi/EFI/refind/
++ /boot/efi/loader/
++ /etc/docker/daemon.json
++ /etc/fstab
++ /etc/gdm3/custom.conf
++ /etc/gdm3/monitors.xml
++ /etc/hostname
++ /etc/modprobe.d/
++ /etc/modules
++ /etc/nsswitch.conf
++ /etc/samba/smb.conf
++ /etc/sddm.conf
++ /etc/ssh/sshd_config
++ /etc/sysctl.conf
++ /etc/udev/rules.d/
+
+##############################################################
+# Home Files
+##############################################################
+
+# Include Common files (explicit)
++ /home/**/.gnome/apps
+
+# Exclude Common Junk files
+- /home/**/.cache
+- /home/**/.cargo
+- /home/**/.com.google.Chrome*
+- /home/**/.docker
+- /home/**/.dotnet
+- /home/**/.gnome
+- /home/**/.lesshst
+- /home/**/.local/share/Steam
+- /home/**/.mozilla
+- /home/**/.nv
+- /home/**/.nuget
+- /home/**/.pki
+- /home/**/.steam
+- /home/**/.var
+- /home/**/.viminfo
+- /home/**/.vscode
+- /home/**/.wget-hsts
+- /home/**/.wine
+- /home/**/.Xauthority
+- /home/**/.xdg
+- /home/**/.zcomp*
+- /home/**/*history*
+- /home/**/node_modules/
+
+# Include Common Config files
++ /home/**/.config/mimeapps.list
++ /home/**/.config/monitors.xml 
++ /home/**/.config/user-dirs*
+# Common Config Directories (whole-sale include)
++ /home/**/.config/autostart/**
++ /home/**/.config/dconf/**
++ /home/**/.config/menus/**
++ /home/**/.config/pipewire/**
+# Include Common Local files
+# Local Directories (whole-sale include)
++ /home/**/.local/share/fonts/**
++ /home/**/.local/share/gnome-settings-daemon/**
++ /home/**/.local/share/gnome-shell/**
